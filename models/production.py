@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 class ProductionModel(Base):
-    __tablename__ = "production"
+    __tablename__ = "productions"
 
     id = Column(Integer, primary_key=True, index=True)
     well_id = Column(Integer, ForeignKey("wells.id"))

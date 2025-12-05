@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Uptime Dashboard - Well</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      h1 {
+        margin-bottom: 10px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #aaa;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background-color: #ddd;
+      }
+      caption {
+        caption-side: top;
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 1.2em;
+      }
+      #chart-container {
+        width: 90%;
+        max-width: 700px;
+        margin-top: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Uptime Dashboard - Well ID: <span id="well-id"></span></h1>
+
+    <div id="loading">Loading uptime data...</div>
+
+    <table id="uptime-table" style="display: none">
+      <caption>
+        Yearly Uptime Percentage
+      </caption>
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Uptime Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Rows inserted here -->
+      </tbody>
+    </table>
+
+    <div id="chart-container" style="display: none">
+      <canvas id="uptimeChart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const wellId = {{ well_id }}; // Replace with your actual well ID
+      document.getElementById("well-id").innerText = wellId;
+
+      async function loadUptimeForWell(wellId) {
+        try {
+          const response = await fetch(
+            `http://localhost:8000/wells/uptime/${wellId}`
+          );
+          if (!response.ok) throw new Error("Failed to fetch uptime data");
+          const data = await response.json();
+
+          // data is an object: { "2010": "99.45%", "2011": "99.73%", ... }
+
+          const years = Object.keys(data).sort();
+          const uptimes = years.map((year) =>
+            parseFloat(data[year].replace("%", ""))
+          );
+
+          if (years.length === 0) {
+            document.getElementById("loading").innerText =
+              "No uptime data found.";
+            return;
+          }
+
+          // Fill table
+          const tbody = document.querySelector("#uptime-table tbody");
+          years.forEach((year) => {
+            const tr = document.createElement("tr");
+            const yearTd = document.createElement("td");
+            yearTd.textContent = year;
+            const uptimeTd = document.createElement("td");
+            uptimeTd.textContent = data[year];
+            tr.appendChild(yearTd);
+            tr.appendChild(uptimeTd);
+            tbody.appendChild(tr);
+          });
+
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("uptime-table").style.display = "table";
+          document.getElementById("chart-container").style.display = "block";
+
+          // Draw chart
+          const ctx = document.getElementById("uptimeChart").getContext("2d");
+          new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: years,
+              datasets: [
+                {
+                  label: "Uptime Percentage",
+                  data: uptimes,
+                  borderColor: "rgb(75, 192, 192)",
+                  backgroundColor: "rgba(75, 192, 192, 0.2)",
+                  fill: true,
+                  tension: 0.2,
+                  pointRadius: 5,
+                  pointHoverRadius: 7,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  title: {
+                    display: true,
+                    text: "Uptime Percentage (%)",
+                  },
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: "Year",
+                  },
+                },
+              },
+              plugins: {
+                title: {
+                  display: true,
+                  text: `Yearly Uptime % for Well ${wellId}`,
+                },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => ctx.parsed.y.toFixed(2) + "%",
+                  },
+                },
+              },
+            },
+          });
+        } catch (error) {
+          console.error(error);
+          document.getElementById("loading").innerText =
+            "Error loading uptime data.";
+        }
+      }
+
+      loadUptimeForWell(wellId);
+    </script>
+  </body>
+</html>

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-
+from sqlalchemy import func
 from database import SessionLocal
-from models import TeamModel
+from models import TeamModel ,InterventionModel
 from schemas import Team, TeamCreate, TeamUpdate
 
 router = APIRouter(prefix="/teams", tags=["Teams"])
@@ -53,3 +53,32 @@ def delete_team(team_id: int, db: Session = Depends(get_db)):
     db.delete(team)
     db.commit()
     return None
+
+@router.get("/teams/productivity/{team_id}")
+def get_team_productivity(team_id: int, db: Session = Depends(get_db)):
+    try:
+        # Query: Count interventions grouped by year
+        results = (
+            db.query(
+                func.strftime('%Y', InterventionModel.start_time).label("year"),
+                func.count(InterventionModel.id).label("intervention_count")
+            )
+            .filter(InterventionModel.team_id == team_id)
+            .group_by("year")
+            .order_by("year")
+            .all()
+        )
+
+        # Convert query result → dict
+        productivity = {
+            row.year: row.intervention_count
+            for row in results
+        }
+
+        return {"team_id": team_id, "productivity_per_year": productivity}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error calculating productivity: {str(e)}"
+        )

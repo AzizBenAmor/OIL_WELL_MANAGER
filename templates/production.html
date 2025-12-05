@@ -1,0 +1,79 @@
+{% extends "base.html" %} {% block content %}
+
+<div class="container mt-4">
+  <h3 class="mb-4">📊 Yearly Production of {{ well_name }}</h3>
+
+  <!-- Table -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <strong>Production Table</strong>
+    </div>
+
+    <div class="card-body">
+      <table class="table table-bordered" id="productionTable">
+        <thead class="table-secondary">
+          <tr>
+            <th>Year</th>
+            <th>Total Production</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card">
+    <div class="card-header"><strong>Production Chart</strong></div>
+
+    <div class="card-body">
+      <canvas id="productionChart" height="100"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function loadProduction() {
+    const wellId = {{ well_id }};
+    console.log("Loading production for well ID:", wellId);
+    const response = await fetch(
+      "http://localhost:8000/production/well/" + wellId
+    ); //
+    const data = await response.json();
+
+    // --- Fill Table ---
+    const tbody = document.querySelector("#productionTable tbody");
+    tbody.innerHTML = "";
+    data.forEach((item) => {
+      tbody.innerHTML += `
+            <tr>
+                <td>${item.year}</td>
+                <td>${item.total_production}</td>
+            </tr>
+        `;
+    });
+
+    // --- Create Chart ---
+    const ctx = document.getElementById("productionChart");
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: data.map((d) => d.year),
+        datasets: [
+          {
+            label: "Production (per year)",
+            data: data.map((d) => d.total_production),
+            borderWidth: 2,
+            fill: false,
+            tension: 0.3,
+          },
+        ],
+      },
+    });
+  }
+
+  loadProduction();
+</script>
+
+{% endblock %}

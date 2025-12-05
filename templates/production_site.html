@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Production Dashboard - Site Comparison</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      h1 {
+        margin-bottom: 10px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #aaa;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background-color: #ddd;
+      }
+      caption {
+        caption-side: top;
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 1.2em;
+      }
+      #chart-container {
+        width: 90%;
+        max-width: 900px;
+        margin-top: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Production Dashboard - Site: <span id="site-name"></span></h1>
+
+    <div id="loading">Loading data...</div>
+
+    <table id="production-table" style="display: none">
+      <caption>
+        Production per Well per Year
+      </caption>
+      <thead>
+        <tr>
+          <th>Well Name</th>
+          <!-- Year columns inserted dynamically -->
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data rows inserted dynamically -->
+      </tbody>
+    </table>
+
+    <div id="chart-container" style="display: none">
+      <canvas id="productionChart"></canvas>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+      const siteId = {{ site_id }};
+      const siteName = "{{ site_name }}";
+
+      document.getElementById("site-name").innerText = siteName;
+
+      async function loadSiteProduction(siteId) {
+        const wellsResponse = await fetch(`http://localhost:8000/sites/${siteId}/wells`);
+        const wells = await wellsResponse.json();
+
+        const prodResponse = await fetch(`http://localhost:8000/sites/${siteId}/production`);
+        const productions = await prodResponse.json();
+
+        // Extract all years to build columns and chart labels
+        const allYearsSet = new Set();
+        for (const wellId in productions) {
+          productions[wellId].forEach(p => allYearsSet.add(p.year));
+        }
+        const allYears = Array.from(allYearsSet).sort();
+
+        // Build table header with years
+        const theadRow = document.querySelector("#production-table thead tr");
+        allYears.forEach(year => {
+          const th = document.createElement("th");
+          th.innerText = year;
+          theadRow.appendChild(th);
+        });
+
+        // Build table body rows per well
+        const tbody = document.querySelector("#production-table tbody");
+        wells.forEach(well => {
+          const tr = document.createElement("tr");
+
+          const nameTd = document.createElement("td");
+          nameTd.innerText = well.name;
+          tr.appendChild(nameTd);
+
+          allYears.forEach(year => {
+            const td = document.createElement("td");
+            const prod = productions[well.id]?.find(p => p.year === year);
+            td.innerText = prod ? prod.total_production.toFixed(2) : "-";
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("production-table").style.display = "table";
+
+        // Prepare datasets for Chart.js (one line per well)
+        const datasets = wells.map(well => {
+          const data = allYears.map(year => {
+            const prod = productions[well.id]?.find(p => p.year === year);
+            return prod ? +prod.total_production.toFixed(2) : null;
+          });
+          const color = getRandomColor();
+          return {
+            label: well.name,
+            data,
+            borderColor: color,
+            backgroundColor: color,
+            fill: false,
+            tension: 0.1,
+          };
+        });
+
+        // Show chart container
+        document.getElementById("chart-container").style.display = "block";
+
+        // Create Chart.js line chart
+        const ctx = document.getElementById('productionChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: allYears,
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Yearly Production Comparison per Well'
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+              },
+              legend: {
+                position: 'bottom',
+              }
+            },
+            interaction: {
+              mode: 'nearest',
+              axis: 'x',
+              intersect: false
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Production Quantity'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Year'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Helper function to generate random pastel colors for chart lines
+      function getRandomColor() {
+        const r = Math.floor(Math.random() * 127 + 127);
+        const g = Math.floor(Math.random() * 127 + 127);
+        const b = Math.floor(Math.random() * 127 + 127);
+        return `rgb(${r},${g},${b})`;
+      }
+
+      loadSiteProduction(siteId).catch(err => {
+        console.error("Error loading production data", err);
+        document.getElementById("loading").innerText = "Failed to load data.";
+      });
+    </script>
+  </body>
+</html>
