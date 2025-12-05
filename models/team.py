@@ -9,6 +9,5 @@ class TeamModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     contact = Column(String)
-    supervisor = Column(String)
 
     interventions = relationship("InterventionModel", back_populates="team")
