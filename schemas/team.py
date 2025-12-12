@@ -4,7 +4,6 @@ from pydantic import BaseModel
 class TeamBase(BaseModel):
     name: str
     contact: str
-    supervisor: str
   
 
 class TeamCreate(TeamBase):

@@ -20,3 +20,9 @@ class Production(ProductionBase):
 
     class Config:
         orm_mode = True
+
+class ProductionYearly(BaseModel):
+    year: str
+    total_production: float
+    class Config:
+        orm_mode = True

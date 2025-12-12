@@ -8,12 +8,15 @@ from routers import (
     intervention,
     production,
     incident,
+    dashboard
 )
 
 app = FastAPI(title="Oil Field Management")
 
 # Create all DB tables
 create_db_and_tables()
+
+app.include_router(dashboard.router)
 
 # Register routers
 app.include_router(site)
