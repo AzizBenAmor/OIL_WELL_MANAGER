@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import sessionmaker, declarative_base # pyright: ignore[reportMissingImports]
 
 # --- DB CONFIG ---
 SQLALCHEMY_DATABASE_URL = "sqlite:///./oil_wells.db"
